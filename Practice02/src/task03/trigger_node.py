@@ -17,14 +17,14 @@ class TriggerNode(Node):
         )
         self.stored_string = self.default_string
 
-        self.trigger_client = self.create_client(Trigger, '/spgc/trigger')
-        self._request_trigger_service()
-
         self.trigger_service = self.create_service(
             Trigger,
             self.service_name,
             self.handle_trigger,
         )
+
+        self.trigger_client = self.create_client(Trigger, '/spgc/trigger')
+        self._request_trigger_service()
 
     def _request_trigger_service(self) -> None:
         if not self.trigger_client.wait_for_service(timeout_sec=2.0):
