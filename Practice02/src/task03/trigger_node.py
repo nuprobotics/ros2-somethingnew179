@@ -17,32 +17,37 @@ class TriggerNode(Node):
         )
         self.stored_string = self.default_string
 
-        self.trigger_service = self.create_service(
+        self.trigger_client = self.create_client(Trigger, '/spgc/trigger')
+        self.stored_string = self._load_trigger_message()
+
+        self.service = self.create_service(
             Trigger,
             self.service_name,
-            self.handle_trigger,
+            self.trigger_callback,
         )
 
-        self.trigger_client = self.create_client(Trigger, '/spgc/trigger')
-        self._request_trigger_service()
-
-    def _request_trigger_service(self) -> None:
-        if not self.trigger_client.wait_for_service(timeout_sec=2.0):
-            return
+    def _load_trigger_message(self) -> str:
+        if not self.trigger_client.wait_for_service(timeout_sec=1.0):
+            return self.default_string
 
         future = self.trigger_client.call_async(Trigger.Request())
-        rclpy.spin_until_future_complete(self, future, timeout_sec=2.0)
+        rclpy.spin_until_future_complete(self, future, timeout_sec=3.0)
 
         if not future.done():
-            return
+            return self.default_string
 
-        result = future.result()
-        if result is None:
-            return
+        try:
+            response = future.result()
+        except Exception:
+            return self.default_string
 
-        self.stored_string = result.message
+        if response is None:
+            return self.default_string
 
-    def handle_trigger(self, _request: Trigger.Request, response: Trigger.Response):
+        return response.message
+
+    def trigger_callback(self, request: Trigger.Request, response: Trigger.Response):
+        _ = request
         response.success = True
         response.message = self.stored_string
         return response
